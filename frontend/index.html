@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spielbericht Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏆 Spielbericht Generator</h1>
+            <p>15. Hannoverscher Schüler- und Jugendcup</p>
+        </header>
+
+        <!-- File Upload Section -->
+        <section class="upload-section">
+            <h2>📁 Dateien hochladen</h2>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="file-input-group">
+                    <div class="file-input-wrapper">
+                        <label for="spielplan">Spielplan Excel-Datei:</label>
+                        <input type="file" id="spielplan" name="spielplan" accept=".xlsx" required>
+                        <span class="file-name" id="spielplanName">Keine Datei ausgewählt</span>
+                    </div>
+
+                    <div class="file-input-wrapper">
+                        <label for="template">Template Excel-Datei:</label>
+                        <input type="file" id="template" name="template" accept=".xlsx" required>
+                        <span class="file-name" id="templateName">Keine Datei ausgewählt</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <span class="spinner" id="uploadSpinner"></span>
+                    Dateien hochladen
+                </button>
+            </form>
+
+            <div id="uploadStatus" class="status-message"></div>
+        </section>
+
+        <!-- Match List Section -->
+        <section class="matches-section" id="matchesSection" style="display: none;">
+            <h2>🎮 Spiele auswählen</h2>
+            <div class="match-controls">
+                <button id="selectAll" class="btn btn-secondary">Alle auswählen</button>
+                <button id="selectNone" class="btn btn-secondary">Alle abwählen</button>
+                <span id="selectionCount" class="selection-count">0 Spiele ausgewählt</span>
+            </div>
+
+            <div class="matches-list" id="matchesList">
+                <!-- Matches will be populated here -->
+            </div>
+
+            <div class="generate-controls">
+                <button id="generateBtn" class="btn btn-success" disabled>
+                    <span class="spinner" id="generateSpinner"></span>
+                    PDF Spielberichte generieren
+                </button>
+            </div>
+        </section>
+
+        <!-- Status Section -->
+        <section class="status-section">
+            <div id="statusMessage" class="status-message"></div>
+        </section>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

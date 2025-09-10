@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pandas
+openpyxl
+jinja2
+aiofiles
+python-multipart
+reportlab
