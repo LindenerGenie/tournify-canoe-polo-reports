@@ -3,6 +3,7 @@ FROM python:3.11-slim
 # Install system dependencies for LibreOffice and PDF generation
 RUN apt-get update && apt-get install -y \
     libreoffice \
+    poppler-utils \
     fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 

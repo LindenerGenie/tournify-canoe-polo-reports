@@ -1,16 +1,17 @@
 from .util import clean_json, find_placeholders_in_template
+import io
+from typing import List
+import json
+import numpy as np
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from .generator import read_spielplan, create_spielbericht
 from .pdf_converter import excel_to_pdf
-import io
-import zipfile
-from typing import List
-import numpy as np
-import json
 import pandas as pd
+import os
+import subprocess
 
 app = FastAPI()
 
@@ -100,60 +101,95 @@ def get_matches():
         return {"success": True, "matches": matches, "count": len(matches)}
     else:
         return {"success": False, "message": "No matches loaded. Please upload files first."}
+
 @app.post("/api/generate")
 async def generate_reports(match_ids: List[int]):
-    global spielplan_df, template_bytes
+    global spielplan_df, template_bytes, template_placeholders
 
-    if spielplan_df is None or template_bytes is None:
+    print(f"generate_reports called with match_ids: {match_ids}")
+    if spielplan_df is None or template_bytes is None or template_placeholders is None:
+        print("Error: Required data not uploaded yet.")
         raise HTTPException(status_code=400, detail="Please upload files first")
 
     try:
         if len(match_ids) == 1:
-            # Single match - return PDF directly
+            print("Generating report for a single match.")
             match_id = match_ids[0]
+            print(f"Single match_id: {match_id}")
             if not (0 <= match_id < len(spielplan_df)):
+                print(f"Invalid match ID: {match_id}")
                 raise HTTPException(status_code=400, detail="Invalid match ID")
 
             match = spielplan_df.iloc[match_id]
+            print(f"Match data: {match}")
             excel_bytes = create_spielbericht(match, template_bytes, template_placeholders)
+            print("Excel bytes for match created.")
             pdf_bytes = excel_to_pdf(excel_bytes)
+            print("PDF bytes for match created.")
 
             filename = f"spielbericht_{match_id+1}_{match['Team 1']}_vs_{match['Team 2']}.pdf"
             filename = filename.replace(" ", "_").replace("/", "_")
+            print(f"PDF filename: {filename}")
 
+            print("Returning single PDF as StreamingResponse.")
             return StreamingResponse(
                 io.BytesIO(pdf_bytes),
                 media_type='application/pdf',
                 headers={'Content-Disposition': f'attachment; filename={filename}'}
             )
         else:
-            # Multiple matches - return ZIP with PDFs
-            zip_buffer = io.BytesIO()
+            print("Generating reports for multiple matches.")
 
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for match_id in match_ids:
-                    if not (0 <= match_id < len(spielplan_df)):
-                        continue
+            pdf_dir = "/app/generated_pdfs"
+            os.makedirs(pdf_dir, exist_ok=True)
+            pdf_paths = []
 
-                    match = spielplan_df.iloc[match_id]
-                    excel_bytes = create_spielbericht(match, template_bytes, template_placeholders)
-                    pdf_bytes = excel_to_pdf(excel_bytes)
+            for match_id in match_ids:
+                print(f"Processing match_id: {match_id}")
+                if not (0 <= match_id < len(spielplan_df)):
+                    print(f"Skipping invalid match ID: {match_id}")
+                    continue
 
-                    filename = f"spielbericht_{match_id+1}_{match['Team 1']}_vs_{match['Team 2']}.pdf"
-                    filename = filename.replace(" ", "_").replace("/", "_")
+                match = spielplan_df.iloc[match_id]
+                print(f"Match data: {match}")
+                excel_bytes = create_spielbericht(match, template_bytes, template_placeholders)
+                print("Excel bytes for match created.")
+                pdf_bytes = excel_to_pdf(excel_bytes)
+                print("PDF bytes for match created.")
 
-                    zip_file.writestr(filename, pdf_bytes)
+                filename = f"spielbericht_{match_id+1}_{match['Team 1']}_vs_{match['Team 2']}.pdf"
+                filename = filename.replace(" ", "_").replace("/", "_")
+                pdf_path = os.path.join(pdf_dir, filename)
+                with open(pdf_path, "wb") as f:
+                    f.write(pdf_bytes)
+                pdf_paths.append(pdf_path)
+                print(f"Saved PDF for match_id: {match_id} to {pdf_path}")
 
-            zip_buffer.seek(0)
+            merged_pdf_path = os.path.join(pdf_dir, "spielberichte_merged.pdf")
+            merge_cmd = ["pdfunite"] + pdf_paths + [merged_pdf_path]
+            print(f"Merging PDFs with command: {' '.join(merge_cmd)}")
+            try:
+                subprocess.run(merge_cmd, check=True)
+            except Exception as e:
+                print(f"Error merging PDFs: {e}")
+                raise HTTPException(status_code=500, detail="Failed to merge PDFs")
 
+            with open(merged_pdf_path, "rb") as f:
+                merged_pdf_bytes = f.read()
+
+            print("Returning merged PDF as StreamingResponse.")
             return StreamingResponse(
-                io.BytesIO(zip_buffer.read()),
-                media_type='application/zip',
-                headers={'Content-Disposition': 'attachment; filename=spielberichte.zip'}
+                io.BytesIO(merged_pdf_bytes),
+                media_type='application/pdf',
+                headers={'Content-Disposition': 'attachment; filename=spielberichte.pdf'}
             )
 
     except Exception as e:
+        import traceback
+        print("Exception in generate_reports:", e)
+        traceback.print_exc()
         return JSONResponse(status_code=500, content={"success": False, "message": f"Error generating reports: {str(e)}"})
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "message": "Spielbericht Generator API is running"}
