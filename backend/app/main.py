@@ -98,20 +98,6 @@ async def upload_files(
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"success": False, "detail": f"Error processing files: {str(e)}"})
 
-@app.get("/api/matches")
-def get_matches():
-    print("Get matches endpoint called")
-    global spielplan_df
-    if spielplan_df is not None:
-        # Replace NaN and infinite values with None
-        df = spielplan_df.replace([np.inf, -np.inf], np.nan)
-        df = df.where(pd.notnull(df), None)
-        matches = df.reset_index().to_dict(orient='records')
-        for i, match in enumerate(matches):
-            match['id'] = i
-        return {"success": True, "matches": matches, "count": len(matches)}
-    else:
-        return {"success": False, "message": "No matches loaded. Please upload files first."}
 
 @app.post("/api/generate")
 async def generate_reports(match_ids: List[int]):
@@ -127,18 +113,20 @@ async def generate_reports(match_ids: List[int]):
             print("Generating report for a single match.")
             match_id = match_ids[0]
             print(f"Single match_id: {match_id}")
-            if not (0 <= match_id < len(spielplan_df)):
+            if not (0 < match_id <= len(spielplan_df)):
                 print(f"Invalid match ID: {match_id}")
                 raise HTTPException(status_code=400, detail="Invalid match ID")
 
-            match = spielplan_df.iloc[match_id]
-            print(f"Match data: {match}")
-            excel_bytes = create_spielbericht(match, template_bytes, template_placeholders, players_by_team)
+            # Create a dictionary from the row and add the id
+            match_dict = spielplan_df.iloc[match_id- 1].to_dict()
+            match_dict['id'] = match_id
+            print(f"Match data: {match_dict}")
+            excel_bytes = create_spielbericht(match_dict, template_bytes, template_placeholders, players_by_team)
             print("Excel bytes for match created.")
             pdf_bytes = excel_to_pdf(excel_bytes)
             print("PDF bytes for match created.")
 
-            filename = f"spielbericht_{match_id+1}_{match['Team 1']}_vs_{match['Team 2']}.pdf"
+            filename = f"spielbericht_{match_id+1}_{match_dict['Team 1']}_vs_{match_dict['Team 2']}.pdf"
             filename = filename.replace(" ", "_").replace("/", "_")
             print(f"PDF filename: {filename}")
 
@@ -157,18 +145,20 @@ async def generate_reports(match_ids: List[int]):
 
             for match_id in match_ids:
                 print(f"Processing match_id: {match_id}")
-                if not (0 <= match_id < len(spielplan_df)):
+                if not (0 < match_id <= len(spielplan_df)):
                     print(f"Skipping invalid match ID: {match_id}")
                     continue
 
-                match = spielplan_df.iloc[match_id]
-                print(f"Match data: {match}")
-                excel_bytes = create_spielbericht(match, template_bytes, template_placeholders, players_by_team)
+                # Create a dictionary from the row and add the id
+                match_dict = spielplan_df.iloc[match_id- 1].to_dict()
+                match_dict['id'] = match_id
+                print(f"Match data: {match_dict}")
+                excel_bytes = create_spielbericht(match_dict, template_bytes, template_placeholders, players_by_team)
                 print("Excel bytes for match created.")
                 pdf_bytes = excel_to_pdf(excel_bytes)
                 print("PDF bytes for match created.")
 
-                filename = f"spielbericht_{match_id+1}_{match['Team 1']}_vs_{match['Team 2']}.pdf"
+                filename = f"spielbericht_{match_id+1}_{match_dict['Team 1']}_vs_{match_dict['Team 2']}.pdf"
                 filename = filename.replace(" ", "_").replace("/", "_")
                 pdf_path = os.path.join(pdf_dir, filename)
                 with open(pdf_path, "wb") as f:

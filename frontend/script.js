@@ -109,7 +109,7 @@ class SpielberichtApp {
             matchDiv.className = 'match-item';
             matchDiv.innerHTML = `
                 <input type="checkbox" class="match-checkbox" data-match-id="${match.id}">
-                <div class="match-number">#${match.id + 1}</div>
+                <div class="match-number">#${match.id}</div>
                 <div class="match-time">${match.Startzeit}</div>
                 <div class="match-teams">${match['Team 1']} vs ${match['Team 2']}</div>
                 <div class="match-league">${match.Liga}</div>
