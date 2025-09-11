@@ -29,8 +29,7 @@ async def read_root(request: Request):
 
 @app.post("/api/upload")
 async def upload_files(
-    spielplan: UploadFile = File(...),
-    template: UploadFile = File(...)
+    spielplan: UploadFile = File(...)
 ):
     global spielplan_bytes, template_bytes, spielplan_df, template_placeholders
 
@@ -39,11 +38,11 @@ async def upload_files(
         # Validate file types
         if not spielplan.filename.endswith('.xlsx'):
             return JSONResponse(status_code=400, content={"success": False, "detail": "Spielplan must be an Excel file (.xlsx)"})
-        if not template.filename.endswith('.xlsx'):
-            return JSONResponse(status_code=400, content={"success": False, "detail": "Template must be an Excel file (.xlsx)"})
 
         spielplan_bytes = await spielplan.read()
-        template_bytes = await template.read()
+        # Read template from file system
+        with open("/app/assets/template.xlsx", "rb") as f:
+            template_bytes = f.read()
         spielplan_df = read_spielplan(spielplan_bytes)
         template_placeholders = find_placeholders_in_template(template_bytes)
 

@@ -18,7 +18,6 @@ class SpielberichtApp {
 
         // File input changes
         document.getElementById('spielplan').addEventListener('change', () => this.updateFileName('spielplan'));
-        document.getElementById('template').addEventListener('change', () => this.updateFileName('template'));
 
         // Match selection controls
         document.getElementById('selectAll').addEventListener('click', () => this.selectAllMatches());
@@ -44,7 +43,6 @@ class SpielberichtApp {
 
     updateFileNames() {
         this.updateFileName('spielplan');
-        this.updateFileName('template');
     }
 
     async handleUpload(e) {
@@ -62,8 +60,11 @@ class SpielberichtApp {
 
         try {
             const formData = new FormData();
-            formData.append('spielplan', document.getElementById('spielplan').files[0]);
-            formData.append('template', document.getElementById('template').files[0]);
+            const spielplanInput = document.getElementById('spielplan');
+            if (!spielplanInput || !spielplanInput.files || spielplanInput.files.length === 0) {
+                throw new Error('Bitte wählen Sie eine Spielplan-Datei aus.');
+            }
+            formData.append('spielplan', spielplanInput.files[0]);
 
             const response = await fetch('/api/upload', {
                 method: 'POST',

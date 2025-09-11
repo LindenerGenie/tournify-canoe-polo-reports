@@ -13,7 +13,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create directory structure
-RUN mkdir -p /app/app /app/frontend
+RUN mkdir -p /app/app /app/frontend /app/assets
+
+COPY assets/template.xlsx /app/assets/template.xlsx
 
 # Copy backend files
 COPY backend/app/main.py /app/app/main.py

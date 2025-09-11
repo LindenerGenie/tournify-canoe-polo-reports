@@ -2,6 +2,11 @@ from tempfile import NamedTemporaryFile
 import os
 import subprocess
 import io
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
+from openpyxl import load_workbook
 
 def excel_to_pdf(excel_bytes):
     """Convert Excel bytes to PDF bytes using LibreOffice"""
@@ -48,11 +53,6 @@ def excel_to_pdf(excel_bytes):
 def excel_to_pdf_alternative(excel_bytes):
     """Alternative PDF conversion using openpyxl and reportlab (if LibreOffice not available)"""
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-        from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.lib import colors
-
         # Create temporary Excel file
         with NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_excel:
             temp_excel.write(excel_bytes)
@@ -62,14 +62,23 @@ def excel_to_pdf_alternative(excel_bytes):
 
         # Create PDF buffer
         pdf_buffer = io.BytesIO()
-        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        # Set margins to be small for maximum usable area
+        margin = 18  # 18 points = 0.25 inch
+        doc = SimpleDocTemplate(
+            pdf_buffer,
+            pagesize=A4,
+            leftMargin=margin,
+            rightMargin=margin,
+            topMargin=margin,
+            bottomMargin=margin
+        )
         story = []
         styles = getSampleStyleSheet()
 
         # Add title
         title = Paragraph("Spielberichtsbogen", styles['Title'])
         story.append(title)
-        story.append(Spacer(1, 12))
+        story.append(Spacer(1, 6))
 
         # Extract key information from Excel
         data = []
@@ -82,16 +91,26 @@ def excel_to_pdf_alternative(excel_bytes):
 
         # Create table
         if data:
-            table = Table(data)
+            # Calculate available width for table
+            page_width, page_height = A4
+            usable_width = page_width - doc.leftMargin - doc.rightMargin
+            num_cols = len(data[0]) if data else 6
+            # Distribute columns evenly
+            col_widths = [usable_width / num_cols] * num_cols
+            # Reduce font size and paddings for compactness
+            table = Table(data, colWidths=col_widths)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 2),
+                ('LEFTPADDING', (0, 0), (-1, -1), 2),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black)
             ]))
             story.append(table)
 
