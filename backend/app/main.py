@@ -1,14 +1,4 @@
-def clean_json(obj):
-    """Recursively replace NaN and infinite values with None for JSON serialization."""
-    if isinstance(obj, dict):
-        return {k: clean_json(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [clean_json(v) for v in obj]
-    elif isinstance(obj, float):
-        if np.isnan(obj) or np.isinf(obj):
-            return None
-        return obj
-    return obj
+from .util import clean_json, find_placeholders_in_template
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,8 +8,8 @@ from .pdf_converter import excel_to_pdf
 import io
 import zipfile
 from typing import List
-import json
 import numpy as np
+import json
 import pandas as pd
 
 app = FastAPI()
@@ -28,10 +18,10 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 templates = Jinja2Templates(directory="frontend")
 
-# Global variables for file storage
 spielplan_bytes = None
 template_bytes = None
 spielplan_df = None
+template_placeholders = None
 
 @app.get("/")
 async def read_root(request: Request):
@@ -42,7 +32,7 @@ async def upload_files(
     spielplan: UploadFile = File(...),
     template: UploadFile = File(...)
 ):
-    global spielplan_bytes, template_bytes, spielplan_df
+    global spielplan_bytes, template_bytes, spielplan_df, template_placeholders
 
     print("Upload endpoint called")
     try:
@@ -55,6 +45,7 @@ async def upload_files(
         spielplan_bytes = await spielplan.read()
         template_bytes = await template.read()
         spielplan_df = read_spielplan(spielplan_bytes)
+        template_placeholders = find_placeholders_in_template(template_bytes)
 
         print("Spielplan read successfully")
         # Replace NaN and infinite values with None
@@ -125,7 +116,7 @@ async def generate_reports(match_ids: List[int]):
                 raise HTTPException(status_code=400, detail="Invalid match ID")
 
             match = spielplan_df.iloc[match_id]
-            excel_bytes = create_spielbericht(match, template_bytes)
+            excel_bytes = create_spielbericht(match, template_bytes, template_placeholders)
             pdf_bytes = excel_to_pdf(excel_bytes)
 
             filename = f"spielbericht_{match_id+1}_{match['Team 1']}_vs_{match['Team 2']}.pdf"
@@ -146,7 +137,7 @@ async def generate_reports(match_ids: List[int]):
                         continue
 
                     match = spielplan_df.iloc[match_id]
-                    excel_bytes = create_spielbericht(match, template_bytes)
+                    excel_bytes = create_spielbericht(match, template_bytes, template_placeholders)
                     pdf_bytes = excel_to_pdf(excel_bytes)
 
                     filename = f"spielbericht_{match_id+1}_{match['Team 1']}_vs_{match['Team 2']}.pdf"

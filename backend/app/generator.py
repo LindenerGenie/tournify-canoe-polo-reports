@@ -3,17 +3,22 @@ from openpyxl import load_workbook
 from tempfile import NamedTemporaryFile
 import os
 import io
+# Use relative imports for local modules if needed
 
 def read_spielplan(file_bytes):
     """Read spielplan from Excel bytes"""
     df = pd.read_excel(io.BytesIO(file_bytes), sheet_name='Ergebnisse')
     return df
 
-def create_spielbericht(match, template_bytes):
-    """Create a single match report with improved exception resilience"""
+def create_spielbericht(match, template_bytes, template_placeholders):
+    """Create a single match report with improved exception resilience, using template_placeholders for efficient replacement."""
     tf = None
     tmp_out = None
     result_bytes = None
+    print("Creating match report...")
+    print("Template placeholders:")
+    for row, col, placeholder in template_placeholders:
+        print(f" - {placeholder} (Cell: {row},{col})")
     try:
         tf = NamedTemporaryFile(delete=False, suffix='.xlsx')
         tf.write(template_bytes)
@@ -50,34 +55,29 @@ def create_spielbericht(match, template_bytes):
             except Exception as e:
                 print(f"Error setting cell ({row},{col}): {e}")
 
-        # Replace template teams with actual teams
-        for row in range(1, ws.max_row + 1):
-            if row > 40:
-                break
-            for col in range(1, ws.max_column + 1):
-                try:
-                    val = ws.cell(row, col).value
-                    if val == "$HEIM":
-                        safe_set_cell(row, col, team1)
-                    elif val == "$GEGNER":
-                        safe_set_cell(row, col, team2)
-                    elif val == "$SCHIRI":
-                        safe_set_cell(row, col, schiedsrichter1)
-                    elif val == "$SCHIRI2":
-                        safe_set_cell(row, col, schiedsrichter2)
-                    elif val == "$DATE":
-                        safe_set_cell(row, col, datum)
-                    elif val == "$TIME":
-                        safe_set_cell(row, col, startzeit)
-                    elif val == "$FIELD":
-                        safe_set_cell(row, col, spielfeld)
-                    elif val == "$LIGA":
-                        safe_set_cell(row, col, liga)
-                    elif val == "$NO":
-                        safe_set_cell(row, col, no)
-                except Exception as e:
-                    print(f"Error replacing placeholder at ({row},{col}): {e}")
-                    continue
+        # Mapping from placeholder to value
+        placeholder_values = {
+            "$HEIM": team1,
+            "$GEGNER": team2,
+            "$SCHIRI": schiedsrichter1,
+            "$SCHIRI2": schiedsrichter2,
+            "$DATE": datum,
+            "$TIME": startzeit,
+            "$FIELD": spielfeld,
+            "$LIGA": liga,
+            "$NO": no
+        }
+
+
+        for row, col, placeholder in template_placeholders:
+            value = placeholder_values.get(placeholder, None)
+            try:
+                if value is not None:
+                    safe_set_cell(row, col, value)
+                else:
+                    safe_set_cell(row, col, "")
+            except Exception as e:
+                print(f"Error setting cell ({row},{col}): {e}")
 
         # Save to temporary file and return bytes
         try:

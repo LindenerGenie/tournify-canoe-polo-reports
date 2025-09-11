@@ -1,4 +1,3 @@
-from openpyxl import load_workbook
 from tempfile import NamedTemporaryFile
 import os
 import subprocess

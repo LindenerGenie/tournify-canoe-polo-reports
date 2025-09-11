@@ -19,6 +19,7 @@ RUN mkdir -p /app/app /app/frontend
 COPY backend/app/main.py /app/app/main.py
 COPY backend/app/generator.py /app/app/generator.py
 COPY backend/app/pdf-converter.py /app/app/pdf_converter.py
+COPY backend/app/util.py /app/app/util.py
 
 # Create empty __init__.py
 RUN touch /app/app/__init__.py
