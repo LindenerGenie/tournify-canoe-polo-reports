@@ -10,7 +10,7 @@ def read_spielplan(file_bytes):
     df = pd.read_excel(io.BytesIO(file_bytes), sheet_name='Ergebnisse')
     return df
 
-def create_spielbericht(match, template_bytes, template_placeholders):
+def create_spielbericht(match, template_bytes, template_placeholders, players_by_team=None):
     """Create a single match report with improved exception resilience, using template_placeholders for efficient replacement."""
     tf = None
     tmp_out = None
@@ -55,6 +55,27 @@ def create_spielbericht(match, template_bytes, template_placeholders):
             except Exception as e:
                 print(f"Error setting cell ({row},{col}): {e}")
 
+        # Get player data for teams if available
+        team1_players = []
+        team2_players = []
+
+        if players_by_team:
+            # Try to find players for team1 and team2 in their respective Liga
+            if liga in players_by_team:
+                # Team 1 players
+                if team1 in players_by_team[liga]:
+                    team1_players = players_by_team[liga][team1]
+                    print(f"Found {len(team1_players)} players for team '{team1}' in liga '{liga}'")
+                else:
+                    print(f"No players found for team '{team1}' in liga '{liga}'")
+
+                # Team 2 players
+                if team2 in players_by_team[liga]:
+                    team2_players = players_by_team[liga][team2]
+                    print(f"Found {len(team2_players)} players for team '{team2}' in liga '{liga}'")
+                else:
+                    print(f"No players found for team '{team2}' in liga '{liga}'")
+
         # Mapping from placeholder to value
         placeholder_values = {
             "$HEIM": team1,
@@ -67,6 +88,26 @@ def create_spielbericht(match, template_bytes, template_placeholders):
             "$LIGA": liga,
             "$NO": no
         }
+
+        # Add player placeholders for Team 1 (Home)
+        for i in range(1, 11):  # Player numbers 1-10
+            player_idx = i - 1
+            if player_idx < len(team1_players):
+                placeholder_values[f"$NAMEH{i}"] = team1_players[player_idx]["Name"]
+                placeholder_values[f"$NH{i}"] = team1_players[player_idx]["Nummer"]
+            else:
+                placeholder_values[f"$NAMEH{i}"] = ""
+                placeholder_values[f"$NH{i}"] = ""
+
+        # Add player placeholders for Team 2 (Away/Guest)
+        for i in range(1, 11):  # Player numbers 1-10
+            player_idx = i - 1
+            if player_idx < len(team2_players):
+                placeholder_values[f"$NAMEG{i}"] = team2_players[player_idx]["Name"]
+                placeholder_values[f"$NG{i}"] = team2_players[player_idx]["Nummer"]
+            else:
+                placeholder_values[f"$NAMEG{i}"] = ""
+                placeholder_values[f"$NG{i}"] = ""
 
 
         for row, col, placeholder in template_placeholders:

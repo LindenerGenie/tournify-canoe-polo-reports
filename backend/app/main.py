@@ -1,4 +1,4 @@
-from .util import clean_json, find_placeholders_in_template
+from .util import clean_json, find_placeholders_in_template, read_players_by_team
 import io
 from typing import List
 import json
@@ -23,6 +23,7 @@ spielplan_bytes = None
 template_bytes = None
 spielplan_df = None
 template_placeholders = None
+players_by_team = None
 
 @app.get("/")
 async def read_root(request: Request):
@@ -30,9 +31,10 @@ async def read_root(request: Request):
 
 @app.post("/api/upload")
 async def upload_files(
-    spielplan: UploadFile = File(...)
+    spielplan: UploadFile = File(...),
+    players: UploadFile = File(None)
 ):
-    global spielplan_bytes, template_bytes, spielplan_df, template_placeholders
+    global spielplan_bytes, template_bytes, spielplan_df, template_placeholders, players_by_team
 
     print("Upload endpoint called")
     try:
@@ -46,6 +48,14 @@ async def upload_files(
             template_bytes = f.read()
         spielplan_df = read_spielplan(spielplan_bytes)
         template_placeholders = find_placeholders_in_template(template_bytes)
+
+        # Handle players file if provided
+        if players is not None:
+            players_bytes = await players.read()
+            players_by_team = read_players_by_team(players_bytes)
+            print("Players loaded:", players_by_team)
+        else:
+            players_by_team = None
 
         print("Spielplan read successfully")
         # Replace NaN and infinite values with None
@@ -78,6 +88,7 @@ async def upload_files(
                 "success": True,
                 "matches": matches,
                 "count": len(matches),
+                "players": players_by_team,
                 "message": f"Successfully loaded {len(matches)} matches"
             }
         )
@@ -104,7 +115,7 @@ def get_matches():
 
 @app.post("/api/generate")
 async def generate_reports(match_ids: List[int]):
-    global spielplan_df, template_bytes, template_placeholders
+    global spielplan_df, template_bytes, template_placeholders, players_by_team
 
     print(f"generate_reports called with match_ids: {match_ids}")
     if spielplan_df is None or template_bytes is None or template_placeholders is None:
@@ -122,7 +133,7 @@ async def generate_reports(match_ids: List[int]):
 
             match = spielplan_df.iloc[match_id]
             print(f"Match data: {match}")
-            excel_bytes = create_spielbericht(match, template_bytes, template_placeholders)
+            excel_bytes = create_spielbericht(match, template_bytes, template_placeholders, players_by_team)
             print("Excel bytes for match created.")
             pdf_bytes = excel_to_pdf(excel_bytes)
             print("PDF bytes for match created.")
@@ -152,7 +163,7 @@ async def generate_reports(match_ids: List[int]):
 
                 match = spielplan_df.iloc[match_id]
                 print(f"Match data: {match}")
-                excel_bytes = create_spielbericht(match, template_bytes, template_placeholders)
+                excel_bytes = create_spielbericht(match, template_bytes, template_placeholders, players_by_team)
                 print("Excel bytes for match created.")
                 pdf_bytes = excel_to_pdf(excel_bytes)
                 print("PDF bytes for match created.")

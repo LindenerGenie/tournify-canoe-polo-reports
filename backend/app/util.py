@@ -3,6 +3,8 @@ from typing import List, Tuple
 from openpyxl import load_workbook
 from tempfile import NamedTemporaryFile
 import numpy as np
+import pandas as pd
+import io
 
 def find_placeholders_in_template(template_bytes) -> List[Tuple[int, int, str]]:
     """
@@ -40,3 +42,45 @@ def clean_json(obj):
             return None
         return obj
     return obj
+
+def read_players_by_team(excel_bytes):
+    """
+    Reads an Excel file containing player assignments from multiple sheets and returns a dictionary:
+    {
+        "liga_name": {
+            "team_name": [ { "Nummer": ..., "Name": ... }, ... ]
+        }
+    }
+    Only teams with assigned players are included.
+    Each sheet is expected to represent a different Liga.
+    """
+    xlsx = pd.ExcelFile(io.BytesIO(excel_bytes))
+    players_by_liga_team = {}
+
+    # Process each sheet in the Excel file
+    for sheet_name in xlsx.sheet_names:
+        df = pd.read_excel(xlsx, sheet_name=sheet_name)
+        liga = sheet_name  # Use sheet name as Liga
+
+        if liga not in players_by_liga_team:
+            players_by_liga_team[liga] = {}
+
+        # Expect columns: "Team", "Nummer", "Name"
+        for _, row in df.iterrows():
+            team = row.get("Team")
+            nummer = row.get("Nummer")
+            name = row.get("Name")
+
+            if pd.isna(team) or pd.isna(nummer) or pd.isna(name):
+                continue
+
+            team = str(team)
+            if team not in players_by_liga_team[liga]:
+                players_by_liga_team[liga][team] = []
+
+            players_by_liga_team[liga][team].append({
+                "Nummer": int(nummer),
+                "Name": str(name)
+            })
+
+    return players_by_liga_team
