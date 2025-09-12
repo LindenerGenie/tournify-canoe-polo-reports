@@ -1,9 +1,12 @@
 class SpielberichtApp {
     constructor() {
         this.matches = [];
+        this.filteredMatches = [];
         this.selectedMatches = new Set();
         this.sortField = 'id';
         this.sortDirection = 'asc';
+        this.searchQuery = '';
+        // We no longer need Fuse.js options as we're implementing custom search
         this.init();
     }
 
@@ -26,8 +29,97 @@ class SpielberichtApp {
         document.getElementById('selectAll').addEventListener('click', () => this.selectAllMatches());
         document.getElementById('selectNone').addEventListener('click', () => this.selectNoMatches());
 
+        // Search input
+        const searchInput = document.getElementById('searchMatches');
+        searchInput.addEventListener('input', (e) => this.handleSearchInput(e.target.value));
+
+        // Clear search button
+        const clearSearchBtn = document.getElementById('clearSearch');
+        clearSearchBtn.addEventListener('click', () => this.clearSearch());
+
         // Generate button
         document.getElementById('generateBtn').addEventListener('click', () => this.generateReports());
+    }
+
+    handleSearchInput(query) {
+        this.searchQuery = query.trim();
+        this.filterMatches();
+        this.renderMatches();
+
+        // Toggle clear button visibility
+        const clearBtn = document.getElementById('clearSearch');
+        if (this.searchQuery) {
+            clearBtn.classList.add('visible');
+        } else {
+            clearBtn.classList.remove('visible');
+        }
+    }
+
+    clearSearch() {
+        const searchInput = document.getElementById('searchMatches');
+        searchInput.value = '';
+        this.searchQuery = '';
+        this.filterMatches();
+        this.renderMatches();
+
+        // Hide clear button
+        document.getElementById('clearSearch').classList.remove('visible');
+
+        // Focus back on search input
+        searchInput.focus();
+    }
+
+    filterMatches() {
+        if (!this.searchQuery) {
+            // If no search query, show all matches
+            this.filteredMatches = this.matches;
+            return;
+        }
+
+        // Custom search implementation that focuses on teams, league, time, and date
+        const query = this.searchQuery.toLowerCase();
+
+        // Convert the query into search terms (split by spaces)
+        const searchTerms = query.split(/\s+/).filter(term => term.length > 0);
+
+        this.filteredMatches = this.matches.filter(match => {
+            // Check if all search terms match
+            return searchTerms.every(term => {
+                // Fields to search in
+                const team1 = (match['Team 1'] || '').toLowerCase();
+                const team2 = (match['Team 2'] || '').toLowerCase();
+                const liga = (match['Liga'] || '').toLowerCase();
+                const time = (match['Startzeit'] || '').toLowerCase();
+                const date = (match['Tag'] || '').toLowerCase();
+
+                // Check if the term appears in any of the fields in the correct order
+                return this.isTermInString(team1, term) ||
+                       this.isTermInString(team2, term) ||
+                       this.isTermInString(liga, term) ||
+                       this.isTermInString(time, term) ||
+                       this.isTermInString(date, term);
+            });
+        });
+    }
+
+    // Helper method to check if a term is in a string, respecting word boundaries
+    isTermInString(str, term) {
+        // Get all words in the string
+        const words = str.split(/\s+/);
+
+        // Check each word to see if it contains the term
+        for (const word of words) {
+            if (word.includes(term)) {
+                return true;
+            }
+        }
+
+        // Also check if the term spans multiple words but in the correct sequence
+        if (str.includes(term)) {
+            return true;
+        }
+
+        return false;
     }
 
     updateFileName(inputId) {
@@ -86,10 +178,13 @@ class SpielberichtApp {
 
             if (result.success) {
                 this.matches = result.matches;
+                this.filteredMatches = result.matches; // Initialize filtered matches with all matches
 
-                // Reset sort to default when loading new data
+                // Reset sort and search when loading new data
                 this.sortField = 'id';
                 this.sortDirection = 'asc';
+                this.searchQuery = '';
+                document.getElementById('searchMatches').value = '';
 
                 this.renderMatches();
                 this.showMatchesSection();
@@ -139,31 +234,53 @@ class SpielberichtApp {
         // Sort the matches
         const sortedMatches = this.getSortedMatches();
 
-        // Render the sorted matches
-        sortedMatches.forEach((match, index) => {
-            const matchDiv = document.createElement('div');
-            matchDiv.className = 'match-item matches-grid';
-            // Create a sanitized class name for the league (remove spaces, special chars, etc.)
-            const leagueClass = this.getLeagueClassName(match.Liga);
-
-            matchDiv.innerHTML = `
-                <input type="checkbox" class="match-checkbox" data-match-id="${match.id}">
-                <div class="match-number">#${match.id}</div>
-                <div class="match-time">${match.Startzeit}</div>
-                <div class="match-teams">${match['Team 1']} vs ${match['Team 2']}</div>
-                <div class="match-league league-${leagueClass}">${match.Liga}</div>
-                <div class="match-referee">${match.Schiedsrichter}</div>
-                <div class="match-date">${match.Tag}</div>
+        // If no matches found with the current search
+        if (sortedMatches.length === 0 && this.searchQuery) {
+            const noMatchesDiv = document.createElement('div');
+            noMatchesDiv.className = 'no-matches-message';
+            noMatchesDiv.innerHTML = `
+                <p>Keine Spiele gefunden für "${this.searchQuery}"</p>
             `;
+            matchesList.appendChild(noMatchesDiv);
+        } else {
+            // Render the sorted matches
+            sortedMatches.forEach((match, index) => {
+                const matchDiv = document.createElement('div');
+                matchDiv.className = 'match-item matches-grid';
+                // Create a sanitized class name for the league (remove spaces, special chars, etc.)
+                const leagueClass = this.getLeagueClassName(match.Liga);
 
-            // Add click event for checkbox
-            const checkbox = matchDiv.querySelector('.match-checkbox');
-            checkbox.addEventListener('change', () => this.handleMatchSelection(match.id, checkbox.checked));
+                // Prepare values with highlights if search query exists
+                const team1 = this.searchQuery ? this.highlightText(match['Team 1'], this.searchQuery) : match['Team 1'];
+                const team2 = this.searchQuery ? this.highlightText(match['Team 2'], this.searchQuery) : match['Team 2'];
+                const liga = this.searchQuery ? this.highlightText(match.Liga, this.searchQuery) : match.Liga;
+                const schiri = this.searchQuery ? this.highlightText(match.Schiedsrichter, this.searchQuery) : match.Schiedsrichter;
+                const tag = this.searchQuery ? this.highlightText(match.Tag, this.searchQuery) : match.Tag;
+                const time = this.searchQuery ? this.highlightText(match.Startzeit, this.searchQuery) : match.Startzeit;
 
-            matchesList.appendChild(matchDiv);
-        });
+                matchDiv.innerHTML = `
+                    <input type="checkbox" class="match-checkbox" data-match-id="${match.id}">
+                    <div class="match-number">#${match.id}</div>
+                    <div class="match-time">${time}</div>
+                    <div class="match-teams">${team1} vs ${team2}</div>
+                    <div class="match-league league-${leagueClass}">${liga}</div>
+                    <div class="match-referee">${schiri}</div>
+                    <div class="match-date">${tag}</div>
+                `;
+
+                // Add click event for checkbox
+                const checkbox = matchDiv.querySelector('.match-checkbox');
+                checkbox.addEventListener('change', () => this.handleMatchSelection(match.id, checkbox.checked));
+
+                // Set initial checkbox state based on selection status
+                checkbox.checked = this.selectedMatches.has(match.id);
+
+                matchesList.appendChild(matchDiv);
+            });
+        }
 
         this.updateSelectionCount();
+        this.updateMatchVisuals();
     }
 
     handleMatchSelection(matchId, isSelected) {
@@ -178,11 +295,14 @@ class SpielberichtApp {
     }
 
     selectAllMatches() {
-        this.matches.forEach(match => {
+        // Always use filtered matches which will contain:
+        // - All matches if no search query
+        // - Only matches matching the search query if there's a search
+        this.filteredMatches.forEach(match => {
             this.selectedMatches.add(match.id);
         });
 
-        // Update all checkboxes
+        // Update only visible checkboxes (which correspond to filtered matches)
         document.querySelectorAll('.match-checkbox').forEach(checkbox => {
             checkbox.checked = true;
         });
@@ -192,12 +312,25 @@ class SpielberichtApp {
     }
 
     selectNoMatches() {
-        this.selectedMatches.clear();
+        // If there's a search query, only deselect matches currently visible
+        if (this.searchQuery) {
+            this.filteredMatches.forEach(match => {
+                this.selectedMatches.delete(match.id);
+            });
 
-        // Update all checkboxes
-        document.querySelectorAll('.match-checkbox').forEach(checkbox => {
-            checkbox.checked = false;
-        });
+            // Update only visible checkboxes
+            document.querySelectorAll('.match-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        } else {
+            // If no search query, clear all selections
+            this.selectedMatches.clear();
+
+            // Update all checkboxes
+            document.querySelectorAll('.match-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
 
         this.updateSelectionCount();
         this.updateMatchVisuals();
@@ -224,6 +357,58 @@ class SpielberichtApp {
         return `color-${hash}`;
     }
 
+    // Helper method to highlight search text
+    highlightText(text, query) {
+        if (!query || !text) return text;
+
+        let highlightedText = text.toString();
+        const textLower = highlightedText.toLowerCase();
+
+        // Split query into terms
+        const terms = query.toLowerCase().split(/\s+/).filter(term => term.length > 0);
+
+        // Create a set to track which parts of the string have been highlighted already
+        const highlightedRanges = [];
+
+        // Process each search term
+        terms.forEach(term => {
+            // Find all occurrences of the term
+            let startPos = 0;
+            while ((startPos = textLower.indexOf(term, startPos)) >= 0) {
+                const endPos = startPos + term.length;
+
+                // Check if this range overlaps with any previously highlighted range
+                const overlaps = highlightedRanges.some(([start, end]) => {
+                    return (startPos >= start && startPos < end) ||
+                           (endPos > start && endPos <= end) ||
+                           (startPos <= start && endPos >= end);
+                });
+
+                if (!overlaps) {
+                    highlightedRanges.push([startPos, endPos]);
+                }
+
+                startPos = endPos;
+            }
+        });
+
+        // Sort ranges in reverse order (to avoid messing up the indices)
+        highlightedRanges.sort((a, b) => b[0] - a[0]);
+
+        // Apply the highlight to each range
+        highlightedRanges.forEach(([start, end]) => {
+            const beforeHighlight = highlightedText.substring(0, start);
+            const toHighlight = highlightedText.substring(start, end);
+            const afterHighlight = highlightedText.substring(end);
+
+            highlightedText = beforeHighlight +
+                              '<span class="search-highlight">' + toHighlight + '</span>' +
+                              afterHighlight;
+        });
+
+        return highlightedText;
+    }
+
     // Handle sorting when a column header is clicked
     handleSortClick(field) {
         // If clicking the same column, toggle direction
@@ -239,10 +424,10 @@ class SpielberichtApp {
         this.renderMatches();
     }
 
-    // Return a sorted copy of the matches array
+    // Return a sorted copy of the filtered matches array
     getSortedMatches() {
-        // Clone the array to avoid modifying the original
-        const sortedMatches = [...this.matches];
+        // Clone the filtered array to avoid modifying it
+        const sortedMatches = [...this.filteredMatches];
 
         // Sort according to current sort field and direction
         sortedMatches.sort((a, b) => {

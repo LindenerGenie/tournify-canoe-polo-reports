@@ -42,11 +42,18 @@
 
         <!-- Match List Section -->
         <section class="matches-section" id="matchesSection" style="display: none;">
-            <h2>🛶 Spiele auswählen</h2>
+            <h2>🖨️ Spiele auswählen</h2>
             <div class="match-controls">
-                <button id="selectAll" class="btn btn-secondary">Alle auswählen</button>
-                <button id="selectNone" class="btn btn-secondary">Alle abwählen</button>
-                <span id="selectionCount" class="selection-count">0 Spiele ausgewählt</span>
+                <div class="match-controls-buttons">
+                    <button id="selectAll" class="btn btn-secondary">Alle auswählen</button>
+                    <button id="selectNone" class="btn btn-secondary">Alle abwählen</button>
+                    <span id="selectionCount" class="selection-count">0 Spiele ausgewählt</span>
+                </div>
+                <div class="search-container">
+                    <input type="text" id="searchMatches" placeholder="Teams, Liga, Uhrzeit oder Datum suchen..." class="search-input">
+                    <button type="button" id="clearSearch" class="clear-search" title="Suche löschen" aria-label="Suche löschen">✕</button>
+                    <div class="search-icon">🔍</div>
+                </div>
             </div>
 
             <div class="matches-list" id="matchesList">
@@ -67,6 +74,7 @@
         </section>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>
