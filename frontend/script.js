@@ -103,10 +103,22 @@ class SpielberichtApp {
     renderMatches() {
         const matchesList = document.getElementById('matchesList');
         matchesList.innerHTML = '';
+        let matchListHeader = document.createElement('div');
+        matchListHeader.className = 'matches-header matches-grid';
+        matchListHeader.innerHTML = `
+            <div class="header-checkbox"></div>
+            <div class="header-id" data-sort="id">Nr</div>
+            <div class="header-time" data-sort="Startzeit">Zeit</div>
+            <div class="header-teams" data-sort="teams">Teams</div>
+            <div class="header-league" data-sort="Liga">Liga</div>
+            <div class="header-referee" data-sort="Schiedsrichter">Schiri</div>
+            <div class="header-date" data-sort="Tag">Tag</div>
+        `;
+        matchesList.appendChild(matchListHeader);
 
         this.matches.forEach((match, index) => {
             const matchDiv = document.createElement('div');
-            matchDiv.className = 'match-item';
+            matchDiv.className = 'match-item matches-grid';
             matchDiv.innerHTML = `
                 <input type="checkbox" class="match-checkbox" data-match-id="${match.id}">
                 <div class="match-number">#${match.id}</div>
