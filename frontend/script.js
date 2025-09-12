@@ -2,6 +2,8 @@ class SpielberichtApp {
     constructor() {
         this.matches = [];
         this.selectedMatches = new Set();
+        this.sortField = 'id';
+        this.sortDirection = 'asc';
         this.init();
     }
 
@@ -84,6 +86,11 @@ class SpielberichtApp {
 
             if (result.success) {
                 this.matches = result.matches;
+
+                // Reset sort to default when loading new data
+                this.sortField = 'id';
+                this.sortDirection = 'asc';
+
                 this.renderMatches();
                 this.showMatchesSection();
                 this.showStatus(result.message, 'success');
@@ -116,7 +123,24 @@ class SpielberichtApp {
         `;
         matchesList.appendChild(matchListHeader);
 
-        this.matches.forEach((match, index) => {
+        // Add sort click handlers to column headers
+        matchListHeader.querySelectorAll('[data-sort]').forEach(header => {
+            const sortField = header.getAttribute('data-sort');
+
+            // Add sort direction class to current sort field
+            if (sortField === this.sortField) {
+                header.classList.add(this.sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+
+            // Add click handler
+            header.addEventListener('click', () => this.handleSortClick(sortField));
+        });
+
+        // Sort the matches
+        const sortedMatches = this.getSortedMatches();
+
+        // Render the sorted matches
+        sortedMatches.forEach((match, index) => {
             const matchDiv = document.createElement('div');
             matchDiv.className = 'match-item matches-grid';
             // Create a sanitized class name for the league (remove spaces, special chars, etc.)
@@ -200,7 +224,55 @@ class SpielberichtApp {
         return `color-${hash}`;
     }
 
-    updateMatchVisuals() {
+    // Handle sorting when a column header is clicked
+    handleSortClick(field) {
+        // If clicking the same column, toggle direction
+        if (field === this.sortField) {
+            this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            // New column, default to ascending
+            this.sortField = field;
+            this.sortDirection = 'asc';
+        }
+
+        // Re-render the matches with the new sort
+        this.renderMatches();
+    }
+
+    // Return a sorted copy of the matches array
+    getSortedMatches() {
+        // Clone the array to avoid modifying the original
+        const sortedMatches = [...this.matches];
+
+        // Sort according to current sort field and direction
+        sortedMatches.sort((a, b) => {
+            let valueA, valueB;
+
+            // Handle special case for teams which needs to combine two fields
+            if (this.sortField === 'teams') {
+                valueA = `${a['Team 1']} ${a['Team 2']}`;
+                valueB = `${b['Team 1']} ${b['Team 2']}`;
+            } else {
+                valueA = a[this.sortField];
+                valueB = b[this.sortField];
+            }
+
+            // Handle numeric vs string comparison
+            let result;
+            if (this.sortField === 'id') {
+                // For ID, do numeric comparison
+                result = Number(valueA) - Number(valueB);
+            } else {
+                // For everything else, do string comparison
+                result = String(valueA).localeCompare(String(valueB));
+            }
+
+            // Reverse for descending sort
+            return this.sortDirection === 'asc' ? result : -result;
+        });
+
+        return sortedMatches;
+    }    updateMatchVisuals() {
         document.querySelectorAll('.match-item').forEach(item => {
             const checkbox = item.querySelector('.match-checkbox');
             const matchId = parseInt(checkbox.dataset.matchId);
