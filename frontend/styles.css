@@ -1149,13 +1149,54 @@ h2 {
 }
 
 .match-league {
-    background: var(--color-primary);
     color: var(--color-btn-primary-text);
     padding: var(--space-4) var(--space-8);
     border-radius: var(--radius-full);
     font-size: var(--font-size-xs);
     text-align: center;
     font-weight: var(--font-weight-medium);
+    background: var(--color-primary); /* Default background */
+}
+
+/* League color variations */
+.match-league.league-color-1 {
+    background: #3b82f6; /* Blue */
+    color:white;
+}
+
+.match-league.league-color-2 {
+    background: #f59e0b; /* Yellow/Orange */
+    color:white;
+}
+
+.match-league.league-color-3 {
+    background: #22c55e; /* Green */
+    color:white;
+}
+
+.match-league.league-color-4 {
+    background: #ef4444; /* Red */
+    color:white;
+}
+
+.match-league.league-color-5 {
+    background: #9333ea; /* Purple */
+    color:white;
+}
+
+.match-league.league-color-6 {
+    background: #f97316; /* Orange */
+    color:white;
+}
+
+.match-league.league-color-7 {
+    background: #ec4899; /* Pink */
+    color:white;
+}
+
+.match-league.league-color-8 {
+    background: #06b6d4; /* Cyan */
+    color:white;
 }
 
 .match-referee {

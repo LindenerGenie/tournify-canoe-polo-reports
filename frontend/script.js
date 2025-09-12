@@ -119,12 +119,15 @@ class SpielberichtApp {
         this.matches.forEach((match, index) => {
             const matchDiv = document.createElement('div');
             matchDiv.className = 'match-item matches-grid';
+            // Create a sanitized class name for the league (remove spaces, special chars, etc.)
+            const leagueClass = this.getLeagueClassName(match.Liga);
+
             matchDiv.innerHTML = `
                 <input type="checkbox" class="match-checkbox" data-match-id="${match.id}">
                 <div class="match-number">#${match.id}</div>
                 <div class="match-time">${match.Startzeit}</div>
                 <div class="match-teams">${match['Team 1']} vs ${match['Team 2']}</div>
-                <div class="match-league">${match.Liga}</div>
+                <div class="match-league league-${leagueClass}">${match.Liga}</div>
                 <div class="match-referee">${match.Schiedsrichter}</div>
                 <div class="match-date">${match.Tag}</div>
             `;
@@ -184,6 +187,17 @@ class SpielberichtApp {
         countSpan.textContent = `${count} Spiele ausgewählt`;
 
         generateBtn.disabled = count === 0;
+    }
+
+    // Helper method to create a valid CSS class name from a league name
+    getLeagueClassName(leagueName) {
+        if (!leagueName) return 'default';
+
+        // Create a consistent hash from the league name to get a deterministic color
+        const hash = Array.from(leagueName)
+            .reduce((acc, char) => acc + char.charCodeAt(0), 0) % 8 + 1;
+
+        return `color-${hash}`;
     }
 
     updateMatchVisuals() {
