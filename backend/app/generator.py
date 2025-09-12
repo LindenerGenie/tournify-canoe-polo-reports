@@ -120,8 +120,9 @@ def create_spielbericht(match, template_bytes, template_placeholders, players_by
         for i in range(1, 11):  # Player numbers 1-10
             player_idx = i - 1
             if player_idx < len(team1_players):
-                placeholder_values[f"$NAMEH{i}"] = team1_players[player_idx]["Name"]
-                placeholder_values[f"$NH{i}"] = team1_players[player_idx]["Nummer"]
+                placeholder_values[f"$NAMEH{i}"] = team1_players[player_idx].get("Name", "")
+                nummer_h = team1_players[player_idx].get("Nummer", "")
+                placeholder_values[f"$NH{i}"] = str(nummer_h) + " " if nummer_h else ""
             else:
                 placeholder_values[f"$NAMEH{i}"] = ""
                 placeholder_values[f"$NH{i}"] = ""
@@ -130,8 +131,9 @@ def create_spielbericht(match, template_bytes, template_placeholders, players_by
         for i in range(1, 11):  # Player numbers 1-10
             player_idx = i - 1
             if player_idx < len(team2_players):
-                placeholder_values[f"$NAMEG{i}"] = team2_players[player_idx]["Name"]
-                placeholder_values[f"$NG{i}"] = team2_players[player_idx]["Nummer"]
+                placeholder_values[f"$NAMEG{i}"] = team2_players[player_idx].get("Name", "")
+                nummer_g = team2_players[player_idx].get("Nummer", "")
+                placeholder_values[f"$NG{i}"] = str(nummer_g) + " " if nummer_g else ""
             else:
                 placeholder_values[f"$NAMEG{i}"] = ""
                 placeholder_values[f"$NG{i}"] = ""
