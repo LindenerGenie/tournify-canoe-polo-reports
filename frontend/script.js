@@ -89,6 +89,7 @@ class SpielberichtApp {
                 const team1 = (match['Team 1'] || '').toLowerCase();
                 const team2 = (match['Team 2'] || '').toLowerCase();
                 const liga = (match['Liga'] || '').toLowerCase();
+                const gruppe = (match['Gruppe'] || '').toLowerCase(); // Add Gruppe to search fields
                 const time = (match['Startzeit'] || '').toLowerCase();
                 const date = (match['Tag'] || '').toLowerCase();
 
@@ -96,6 +97,7 @@ class SpielberichtApp {
                 return this.isTermInString(team1, term) ||
                        this.isTermInString(team2, term) ||
                        this.isTermInString(liga, term) ||
+                       this.isTermInString(gruppe, term) || // Add check for Gruppe
                        this.isTermInString(time, term) ||
                        this.isTermInString(date, term);
             });
@@ -212,7 +214,7 @@ class SpielberichtApp {
             <div class="header-id" data-sort="id">Nr</div>
             <div class="header-time" data-sort="Startzeit">Zeit</div>
             <div class="header-teams" data-sort="teams">Teams</div>
-            <div class="header-league" data-sort="Liga">Liga</div>
+            <div class="header-league" data-sort="Liga">Liga/Gruppe</div>
             <div class="header-referee" data-sort="Schiedsrichter">Schiri</div>
             <div class="header-date" data-sort="Tag">Tag</div>
         `;
@@ -253,7 +255,16 @@ class SpielberichtApp {
                 // Prepare values with highlights if search query exists
                 const team1 = this.searchQuery ? this.highlightText(match['Team 1'], this.searchQuery) : match['Team 1'];
                 const team2 = this.searchQuery ? this.highlightText(match['Team 2'], this.searchQuery) : match['Team 2'];
-                const liga = this.searchQuery ? this.highlightText(match.Liga, this.searchQuery) : match.Liga;
+
+                // Combine Liga and Gruppe if Gruppe exists
+                let ligaDisplay = match.Liga || '';
+                if (match.Gruppe) {
+                    // Highlight both Liga and Gruppe if there's a search query
+                    const gruppe = this.searchQuery ? this.highlightText(match.Gruppe, this.searchQuery) : match.Gruppe;
+                    ligaDisplay += ` - ${gruppe}`;
+                }
+
+                const liga = this.searchQuery ? this.highlightText(ligaDisplay, this.searchQuery) : ligaDisplay;
                 const schiri = this.searchQuery ? this.highlightText(match.Schiedsrichter, this.searchQuery) : match.Schiedsrichter;
                 const tag = this.searchQuery ? this.highlightText(match.Tag, this.searchQuery) : match.Tag;
                 const time = this.searchQuery ? this.highlightText(match.Startzeit, this.searchQuery) : match.Startzeit;
@@ -473,7 +484,11 @@ class SpielberichtApp {
     showMatchesSection() {
         const section = document.getElementById('matchesSection');
         section.style.display = 'block';
-        section.scrollIntoView({ behavior: 'smooth' });
+
+        // Scroll to the section after a small delay to ensure it's rendered
+        setTimeout(() => {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
     }
 
     async generateReports() {
@@ -538,15 +553,26 @@ class SpielberichtApp {
     }
 
     showStatus(message, type) {
-        const statusDiv = document.getElementById('uploadStatus');
-        statusDiv.textContent = message;
-        statusDiv.className = `status-message ${type}`;
+        // Update both status divs - the upload status in the form and the floating status
+        const uploadStatusDiv = document.getElementById('uploadStatus');
+        if (uploadStatusDiv) {
+            uploadStatusDiv.textContent = message;
+            uploadStatusDiv.className = `status-message ${type}`;
+        }
 
-        // Auto-hide success messages after 5 seconds
-        if (type === 'success') {
+        // Show floating status message
+        const statusDiv = document.getElementById('statusMessage');
+        statusDiv.textContent = message;
+        statusDiv.className = `status-message floating-status ${type} visible`;
+
+        // Auto-hide all status messages after 5 seconds
+        if (type === 'success' || type === 'info') {
             setTimeout(() => {
-                statusDiv.textContent = '';
-                statusDiv.className = 'status-message';
+                if (uploadStatusDiv) {
+                    uploadStatusDiv.textContent = '';
+                    uploadStatusDiv.className = 'status-message';
+                }
+                statusDiv.className = 'status-message floating-status';
             }, 5000);
         }
     }

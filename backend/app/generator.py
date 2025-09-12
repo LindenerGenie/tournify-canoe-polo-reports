@@ -37,6 +37,9 @@ def create_spielbericht(match, template_bytes, template_placeholders, players_by
             datum = match.get('Tag', "")
             spielfeld = match.get('Feld', "")
             liga = match.get('Liga', "")
+            gruppe = match.get('Gruppe', "")
+            if pd.isna(gruppe):
+                gruppe = ""
             team1 = match.get('Team 1', "")
             team2 = match.get('Team 2', "")
             schiedsrichter1 = match.get('Schiedsrichter', "")
@@ -47,11 +50,15 @@ def create_spielbericht(match, template_bytes, template_placeholders, players_by
             print(f"Error extracting match data: {e}")
             return None
 
+        from openpyxl.styles import Alignment
+
         def safe_set_cell(row, col, value):
             try:
                 cell = ws.cell(row, col)
                 if hasattr(cell, 'value'):
                     cell.value = value
+                    if isinstance(value, str) and '\n' in value:
+                        cell.alignment = Alignment(wrap_text=True, vertical='top', horizontal='center')
             except Exception as e:
                 print(f"Error setting cell ({row},{col}): {e}")
 
@@ -76,6 +83,23 @@ def create_spielbericht(match, template_bytes, template_placeholders, players_by
                 else:
                     print(f"No players found for team '{team2}' in liga '{liga}'")
 
+        # Determine Spielzeit based on age category in liga or gruppe
+        liga_gruppe = f"{liga} {gruppe}".lower()
+
+        # Check for U12, u12, U-12 variations in both liga and gruppe
+        if any(u12_pattern in liga_gruppe for u12_pattern in ["u12", "u-12", "u 12"]):
+            duration = "2x7 Minuten"
+            pause = "3 Minuten"
+
+        # Check for U14, U16 variations
+        elif any(pattern in liga_gruppe for pattern in ["u14", "u-14", "u 14", "u16", "u-16", "u 16"]):
+            duration = "2x10 Minuten"
+            pause = "5 Minuten"
+
+
+        # Create the vermerk text with "GRUPPE"
+        vermerk_text = f"{gruppe}"
+
         # Mapping from placeholder to value
         placeholder_values = {
             "$HEIM": team1,
@@ -86,7 +110,10 @@ def create_spielbericht(match, template_bytes, template_placeholders, players_by
             "$TIME": startzeit,
             "$FIELD": spielfeld,
             "$LIGA": liga,
-            "$NO": no
+            "$NO": no,
+            "$VERMERK": vermerk_text,
+            "$DURATION": duration,
+            "$PAUSE": pause
         }
 
         # Add player placeholders for Team 1 (Home)
