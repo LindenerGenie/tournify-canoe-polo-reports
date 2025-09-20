@@ -32,14 +32,17 @@ async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 # New endpoint for einsätze PDF export
+
 @app.post("/api/einsaetze_pdf")
 async def einsaetze_pdf_endpoint(request: Request):
     try:
-        einsaetze_list = await request.json()
+        payload = await request.json()
+        einsaetze_list = payload.get('listing') if isinstance(payload, dict) else payload
+        filtered_teams = payload.get('filteredTeams') if isinstance(payload, dict) else None
         # Validate input
         if not isinstance(einsaetze_list, list):
             return JSONResponse(status_code=400, content={"success": False, "detail": "Input must be a list of einsätze objects."})
-        pdf_bytes = create_einsaetze_pdf(einsaetze_list)
+        pdf_bytes = create_einsaetze_pdf(einsaetze_list, filtered_teams)
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
             media_type='application/pdf',

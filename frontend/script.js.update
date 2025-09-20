@@ -1,0 +1,90 @@
+// This is a temporary file to explain the JavaScript changes needed
+
+// In the renderMatches function in script.js, you'll need to update the match-item rendering
+// to account for the new grid structure. Instead of creating a div with class 'match-item'
+// that contains all the cells, you would render each cell directly as a child of the matches-list.
+
+// For example, where you currently have something like this:
+/*
+sortedMatches.forEach((match) => {
+    const matchDiv = document.createElement('div');
+    matchDiv.className = 'match-item';
+    matchDiv.innerHTML = `
+        <input type="checkbox" class="match-checkbox" data-match-id="${match.id}">
+        <div class="match-number">#${match.id}</div>
+        <div class="match-date">${match.Tag}</div>
+        <div class="match-time">${match.Startzeit}</div>
+        <div class="match-teams">${match['Team 1']} vs ${match['Team 2']}</div>
+        <div class="match-league">${match.Liga}</div>
+        <div class="match-referee">${match.Schiedsrichter}</div>
+    `;
+
+    // Add click event for checkbox
+    const checkbox = matchDiv.querySelector('.match-checkbox');
+    checkbox.addEventListener('change', () => this.handleMatchSelection(match.id, checkbox.checked));
+
+    matchesContainer.appendChild(matchDiv);
+});
+*/
+
+// You would change it to something like this:
+/*
+sortedMatches.forEach((match) => {
+    const matchItemClass = 'match-item';
+    const matchId = match.id;
+
+    // Create a wrapper to hold the row
+    const rowWrapper = document.createElement('div');
+    rowWrapper.className = matchItemClass;
+    rowWrapper.dataset.matchId = matchId;
+
+    // Create checkbox cell
+    const checkboxCell = document.createElement('div');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'match-checkbox';
+    checkbox.dataset.matchId = matchId;
+    checkbox.addEventListener('change', () => this.handleMatchSelection(match.id, checkbox.checked));
+    checkboxCell.appendChild(checkbox);
+
+    // Create other cells
+    const numberCell = document.createElement('div');
+    numberCell.className = 'match-number';
+    numberCell.textContent = `#${match.id}`;
+
+    const dateCell = document.createElement('div');
+    dateCell.className = 'match-date';
+    dateCell.textContent = match.Tag;
+
+    const timeCell = document.createElement('div');
+    timeCell.className = 'match-time';
+    timeCell.textContent = match.Startzeit;
+
+    const teamsCell = document.createElement('div');
+    teamsCell.className = 'match-teams';
+    teamsCell.textContent = `${match['Team 1']} vs ${match['Team 2']}`;
+
+    const leagueCell = document.createElement('div');
+    leagueCell.className = 'match-league';
+    leagueCell.textContent = match.Liga;
+
+    const refereeCell = document.createElement('div');
+    refereeCell.className = 'match-referee';
+    refereeCell.textContent = match.Schiedsrichter;
+
+    // Add all cells to the wrapper
+    rowWrapper.appendChild(checkboxCell);
+    rowWrapper.appendChild(numberCell);
+    rowWrapper.appendChild(dateCell);
+    rowWrapper.appendChild(timeCell);
+    rowWrapper.appendChild(teamsCell);
+    rowWrapper.appendChild(leagueCell);
+    rowWrapper.appendChild(refereeCell);
+
+    // Add the wrapper to the container
+    matchesContainer.appendChild(rowWrapper);
+});
+*/
+
+// This is just a guide for how the JavaScript would need to be updated.
+// The actual implementation would depend on how you're selecting and handling rows.

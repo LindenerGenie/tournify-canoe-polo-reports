@@ -100,6 +100,8 @@ class SpielberichtApp {
     }
 
     renderTeamMatchListing(filteredTeams) {
+        // Store filtered teams for export
+        this.lastFilteredTeams = filteredTeams.map(t => t.name);
         // Store the latest relevant matches for export
         this.latestEinsaetzeListing = [];
         const listingDiv = document.getElementById('teamMatchListing');
@@ -222,11 +224,12 @@ class SpielberichtApp {
             alert('Keine Einsätze zum Exportieren gefunden.');
             return;
         }
+        const filteredTeams = this.lastFilteredTeams || [];
         try {
             const response = await fetch('/api/einsaetze_pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.latestEinsaetzeListing)
+                body: JSON.stringify({ listing: this.latestEinsaetzeListing, filteredTeams })
             });
             if (!response.ok) throw new Error('PDF Export fehlgeschlagen');
             const blob = await response.blob();
