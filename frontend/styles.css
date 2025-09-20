@@ -1,3 +1,46 @@
+/* Tabs styling to match app design */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs);
+  padding: 8px 16px;
+  border: 1px solid var(--color-card-border);
+}
+.tab-button {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  background: var(--color-secondary);
+  border: 1px solid var(--color-card-border-inner);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  outline: none;
+}
+.tab-button.active {
+  background: var(--color-primary);
+  color: var(--color-btn-primary-text);
+  border-bottom: 2px solid var(--color-primary);
+  z-index: 2;
+}
+.tab-button:not(.active):hover {
+  background: var(--color-secondary-hover);
+  color: var(--color-primary);
+}
+.tab-content {
+  background: var(--color-surface);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  box-shadow: var(--shadow-xs);
+  border: 1px solid var(--color-card-border);
+  border-top: none;
+  padding: 24px 16px;
+  margin-bottom: 24px;
+}
 :root {
   /* Primitive Color Tokens */
   --color-white: rgba(255, 255, 255, 1);
@@ -1092,7 +1135,7 @@ h2 {
     color: var(--color-text-primary);
     align-items: center;
     height: 48px; /* Consistent height for the header row */
-    /* Make header sticky to help with long lists */
+    /* Make header sticky to hIelp with long lists */
     position: sticky;
     top: 0;
     z-index: 10;

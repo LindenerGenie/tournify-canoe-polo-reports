@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spielbericht Generator</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
+
     <div class="container">
         <header>
             <h1>🏆 Spielbericht Generator</h1>
@@ -40,40 +41,57 @@
             <div id="uploadStatus" class="status-message"></div>
         </section>
 
-        <!-- Match List Section -->
-        <section class="matches-section" id="matchesSection" style="display: none;">
-            <h2>🖨️ Spiele auswählen</h2>
-            <div class="match-controls">
-                <div class="match-controls-buttons">
-                    <button id="selectAll" class="btn btn-secondary">Alle auswählen</button>
-                    <button id="selectNone" class="btn btn-secondary">Alle abwählen</button>
-                    <span id="selectionCount" class="selection-count">0 Spiele ausgewählt</span>
+        <nav class="tabs">
+            <button class="tab-button active" data-tab="tab1">Spielberichte</button>
+            <button class="tab-button" data-tab="tab2">Neue Funktion</button>
+        </nav>
+        <div class="tab-content" id="tab1" style="display: block;">
+            <!-- Match List Section -->
+            <section class="matches-section" id="matchesSection" style="display: none;">
+                <h2>🖨️ Spiele auswählen</h2>
+                <div class="match-controls">
+                    <div class="match-controls-buttons">
+                        <button id="selectAll" class="btn btn-secondary">Alle auswählen</button>
+                        <button id="selectNone" class="btn btn-secondary">Alle abwählen</button>
+                        <span id="selectionCount" class="selection-count">0 Spiele ausgewählt</span>
+                    </div>
+                    <div class="search-container">
+                        <input type="text" id="searchMatches" placeholder="Teams, Liga, Uhrzeit oder Datum suchen..." class="search-input">
+                        <button type="button" id="clearSearch" class="clear-search" title="Suche löschen" aria-label="Suche löschen">✕</button>
+                        <div class="search-icon">🔍</div>
+                    </div>
                 </div>
-                <div class="search-container">
-                    <input type="text" id="searchMatches" placeholder="Teams, Liga, Uhrzeit oder Datum suchen..." class="search-input">
-                    <button type="button" id="clearSearch" class="clear-search" title="Suche löschen" aria-label="Suche löschen">✕</button>
-                    <div class="search-icon">🔍</div>
+
+                <div class="matches-list" id="matchesList">
+                    <!-- Matches will be populated here -->
                 </div>
-            </div>
 
-            <div class="matches-list" id="matchesList">
-                <!-- Matches will be populated here -->
-            </div>
-
-            <div class="generate-controls">
-                <button id="generateBtn" class="btn btn-success" disabled>
-                    <span class="spinner" id="generateSpinner"></span>
-                    PDF Spielberichte generieren
-                </button>
-            </div>
-        </section>
-
-        <!-- Status Section (moved inside matches section) -->
+                <div class="generate-controls">
+                    <button id="generateBtn" class="btn btn-success" disabled>
+                        <span class="spinner" id="generateSpinner"></span>
+                        PDF Spielberichte generieren
+                    </button>
+                </div>
+            </section>
+            <!-- Floating status message -->
+            <div id="statusMessage" class="status-message floating-status"></div>
+        </div>
+        <div class="tab-content" id="tab2" style="display: none;">
+            <h2>Neue Funktion</h2>
+            <p>Hier kann eine neue Funktionalität hinzugefügt werden.</p>
+        </div>
     </div>
-
-    <!-- Floating status message -->
-    <div id="statusMessage" class="status-message floating-status"></div>
-
+    <script>
+    // Simple tab switching logic
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = 'none');
+            document.getElementById(this.dataset.tab).style.display = 'block';
+        });
+    });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script src="/static/script.js"></script>
 </body>
