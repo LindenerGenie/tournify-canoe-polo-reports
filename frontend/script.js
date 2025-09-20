@@ -76,6 +76,11 @@ class SpielberichtApp {
         if (clearTeamSearchBtn) {
             clearTeamSearchBtn.addEventListener('click', () => this.clearTeamSearch());
         }
+        // Add event listener for excludePastMatches checkbox
+        const excludePastCheckbox = document.getElementById('excludePastMatches');
+        if (excludePastCheckbox) {
+            excludePastCheckbox.addEventListener('change', () => this.renderTeamSearchResults());
+        }
     }
     // --- Team/Liga fuzzy search logic for tab 2 ---
     handleTeamSearchInput(query) {
@@ -107,32 +112,42 @@ class SpielberichtApp {
         const listingDiv = document.getElementById('teamMatchListing');
         if (!listingDiv) return;
         const teamNames = filteredTeams.map(t => t.name);
+        // Check if past matches should be excluded
+        const excludePast = document.getElementById('excludePastMatches')?.checked ?? true;
         // Get current date/time
         const now = new Date();
         // Find all matches where any team is playing or is referee
-    const relevantMatches = this.matches.filter(match => {
-            // Parse date and time
-            const dateStr = match['Tag'];
-            const timeStr = match['Startzeit'];
-            let matchDate;
-            if (dateStr && timeStr) {
-                // Try to parse as YYYY-MM-DD HH:MM or DD.MM.YYYY HH:MM
-                let iso = dateStr;
-                if (iso.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
-                    // Convert DD.MM.YYYY to YYYY-MM-DD
-                    const [d, m, y] = iso.split('.');
-                    iso = `${y}-${m}-${d}`;
+            const relevantMatches = this.matches.filter(match => {
+                const dateStr = match['Tag'];
+                const timeStr = match['Startzeit'];
+                let matchDate = null;
+                if (dateStr && timeStr) {
+                    let iso = dateStr;
+                    // Support DD.MM.YYYY and DD-MM-YYYY
+                    if (iso.match(/^\d{2}[.-]\d{2}[.-]\d{4}$/)) {
+                        const [d, m, y] = iso.split(/[.-]/);
+                        iso = `${y}-${m}-${d}`;
+                    }
+                    matchDate = new Date(`${iso}T${timeStr}`);
                 }
-                matchDate = new Date(`${iso}T${timeStr}`);
-            }
-            // Only include matches in the future
-            if (!matchDate || matchDate < now) return false;
-            return teamNames.some(name =>
-                match['Team 1'] === name ||
-                match['Team 2'] === name ||
-                match['Schiedsrichter'] === name
-            );
-        });
+                // Debug logging
+                console.log('Match:', match);
+                console.log('Parsed matchDate:', matchDate, 'Current date:', now, 'Exclude past:', excludePast);
+                let isPast = matchDate && matchDate < now;
+                if (excludePast) {
+                    if (!matchDate || isPast) {
+                        console.log('Excluding match because it is past or date is invalid:', match);
+                        return false;
+                    }
+                }
+                const isRelevant = teamNames.some(name =>
+                    match['Team 1'] === name ||
+                    match['Team 2'] === name ||
+                    match['Schiedsrichter'] === name
+                );
+                console.log('Is relevant:', isRelevant);
+                return isRelevant;
+            });
     // Sort by date/time
     relevantMatches.sort((a, b) => {
             const getDate = m => {

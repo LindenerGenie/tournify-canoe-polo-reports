@@ -43,7 +43,7 @@
 
         <nav class="tabs">
             <button class="tab-button active" data-tab="tab1">Spielberichte</button>
-            <button class="tab-button" data-tab="tab2">Neue Funktion</button>
+            <button class="tab-button" data-tab="tab2">Aktivitäten</button>
         </nav>
         <div class="tab-content" id="tab1" style="display: block;">
             <!-- Match List Section -->
@@ -77,11 +77,15 @@
             <div id="statusMessage" class="status-message floating-status"></div>
         </div>
         <div class="tab-content" id="tab2" style="display: none;">
-            <h2>Team/Liga Suche</h2>
+            <h2>Team Suche</h2>
             <div class="team-search-section">
                 <label for="teamSearchInput">🔍 Team oder Liga suchen:</label>
                 <input type="text" id="teamSearchInput" class="search-input" placeholder="Teamname oder Liga...">
                 <button type="button" id="clearTeamSearch" class="clear-search" title="Suche löschen" aria-label="Suche löschen">✕</button>
+                <label style="margin-left:1em;">
+                    <input type="checkbox" id="excludePastMatches" checked>
+                    Nur zukünftige Spiele anzeigen
+                </label>
             </div>
             <div id="teamSearchResults" class="team-search-results"></div>
             <div style="display: flex; align-items: center; gap: 1em;">
