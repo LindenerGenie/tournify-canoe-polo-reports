@@ -1,4 +1,60 @@
 class SpielberichtApp {
+    renderTeamSearchResults() {
+        const resultsDiv = document.getElementById('teamSearchResults');
+        if (!resultsDiv) return;
+        resultsDiv.innerHTML = '';
+
+        if (!this.teamSearchQuery) {
+            resultsDiv.innerHTML = '<p>Bitte geben Sie einen Teamnamen oder eine Liga ein.</p>';
+            document.getElementById('teamMatchListing').innerHTML = '';
+            return;
+        }
+
+        // Gather all teams and their liga
+        const teams = [];
+        this.matches.forEach(match => {
+            if (match['Team 1']) teams.push({ name: match['Team 1'], liga: match['Liga'] });
+            if (match['Team 2']) teams.push({ name: match['Team 2'], liga: match['Liga'] });
+        });
+
+        // Remove duplicates (team+liga combo)
+        const uniqueTeams = Array.from(new Set(teams.map(t => t.name + '|' + t.liga)))
+            .map(str => {
+                const [name, liga] = str.split('|');
+                return { name, liga };
+            });
+
+        // Fuzzy search
+        const query = this.teamSearchQuery.toLowerCase();
+        const terms = query.split(/\s+/).filter(Boolean);
+        const filtered = uniqueTeams.filter(teamObj => {
+            // Match if all terms are in team name or liga
+            return terms.every(term =>
+                teamObj.name.toLowerCase().includes(term) ||
+                (teamObj.liga && teamObj.liga.toLowerCase().includes(term))
+            );
+        });
+
+        if (filtered.length === 0) {
+            resultsDiv.innerHTML = `<p>Keine Teams gefunden für "${this.teamSearchQuery}"</p>`;
+            document.getElementById('teamMatchListing').innerHTML = '';
+            return;
+        }
+
+        // Show results
+        const ul = document.createElement('ul');
+        ul.className = 'team-search-list';
+        filtered.forEach(teamObj => {
+            const li = document.createElement('li');
+            li.className = 'team-search-item';
+            li.innerHTML = `<strong>${this.highlightText(teamObj.name, this.teamSearchQuery)}</strong> <span class="team-liga">(${teamObj.liga})</span>`;
+            ul.appendChild(li);
+        });
+        resultsDiv.appendChild(ul);
+
+        // --- Match listing for filtered teams ---
+        this.renderTeamMatchListing(filtered);
+    }
     constructor() {
         this.matches = [];
         this.filteredMatches = [];
@@ -8,11 +64,139 @@ class SpielberichtApp {
         this.searchQuery = '';
         // We no longer need Fuse.js options as we're implementing custom search
         this.init();
+        this.teamSearchQuery = '';
+    }
+
+    bindTeamSearchEvents() {
+        const teamSearchInput = document.getElementById('teamSearchInput');
+        if (teamSearchInput) {
+            teamSearchInput.addEventListener('input', (e) => this.handleTeamSearchInput(e.target.value));
+        }
+        const clearTeamSearchBtn = document.getElementById('clearTeamSearch');
+        if (clearTeamSearchBtn) {
+            clearTeamSearchBtn.addEventListener('click', () => this.clearTeamSearch());
+        }
+    }
+    // --- Team/Liga fuzzy search logic for tab 2 ---
+    handleTeamSearchInput(query) {
+        this.teamSearchQuery = query.trim();
+        this.renderTeamSearchResults();
+        // Toggle clear button visibility
+        const clearBtn = document.getElementById('clearTeamSearch');
+        if (this.teamSearchQuery) {
+            clearBtn.classList.add('visible');
+        } else {
+            clearBtn.classList.remove('visible');
+        }
+    }
+
+    clearTeamSearch() {
+        const teamSearchInput = document.getElementById('teamSearchInput');
+        teamSearchInput.value = '';
+        this.teamSearchQuery = '';
+        this.renderTeamSearchResults();
+        document.getElementById('clearTeamSearch').classList.remove('visible');
+        teamSearchInput.focus();
+    }
+
+    renderTeamMatchListing(filteredTeams) {
+        const listingDiv = document.getElementById('teamMatchListing');
+        if (!listingDiv) return;
+        const teamNames = filteredTeams.map(t => t.name);
+        // Get current date/time
+        const now = new Date();
+        // Find all matches where any team is playing or is referee
+        const relevantMatches = this.matches.filter(match => {
+            // Parse date and time
+            const dateStr = match['Tag'];
+            const timeStr = match['Startzeit'];
+            let matchDate;
+            if (dateStr && timeStr) {
+                // Try to parse as YYYY-MM-DD HH:MM or DD.MM.YYYY HH:MM
+                let iso = dateStr;
+                if (iso.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+                    // Convert DD.MM.YYYY to YYYY-MM-DD
+                    const [d, m, y] = iso.split('.');
+                    iso = `${y}-${m}-${d}`;
+                }
+                matchDate = new Date(`${iso}T${timeStr}`);
+            }
+            // Only include matches in the future
+            if (!matchDate || matchDate < now) return false;
+            return teamNames.some(name =>
+                match['Team 1'] === name ||
+                match['Team 2'] === name ||
+                match['Schiedsrichter'] === name
+            );
+        });
+        // Sort by date/time
+        relevantMatches.sort((a, b) => {
+            const getDate = m => {
+                let iso = m['Tag'];
+                if (iso && iso.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
+                    const [d, mth, y] = iso.split('.');
+                    iso = `${y}-${mth}-${d}`;
+                }
+                return new Date(`${iso}T${m['Startzeit']}`);
+            };
+            return getDate(a) - getDate(b);
+        });
+        if (relevantMatches.length === 0) {
+            listingDiv.innerHTML = '<p>Keine zukünftigen Spiele für die gefilterten Teams gefunden.</p>';
+            return;
+        }
+        // Render as table
+        const table = document.createElement('table');
+        table.className = 'team-match-table';
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Zeit</th>
+                    <th>Teams</th>
+                    <th>Liga</th>
+                    <th>Beteiligung</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        `;
+        const tbody = table.querySelector('tbody');
+        relevantMatches.forEach(match => {
+            const involved = [];
+            teamNames.forEach(name => {
+                if (match['Team 1'] === name || match['Team 2'] === name) {
+                    involved.push({ name, type: 'player' });
+                }
+                if (match['Schiedsrichter'] === name) {
+                    involved.push({ name, type: 'referee' });
+                }
+            });
+            const uniqueInvolved = Array.from(new Set(involved.map(i => i.name + '|' + i.type)))
+                .map(str => {
+                    const [name, type] = str.split('|');
+                    return { name, type };
+                });
+            const icons = { player: '⚽', referee: '🦺' };
+            const colors = { player: 'var(--color-primary)', referee: 'var(--color-warning)' };
+            const involvedStr = uniqueInvolved.map(i =>
+                `<span style="color:${colors[i.type]};font-weight:bold;">${icons[i.type]} ${i.name}</span>`
+            ).join(', ');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${match['Tag']} ${match['Startzeit']}</td>
+                <td>${match['Team 1']} vs ${match['Team 2']}</td>
+                <td>${match['Liga']}${match['Gruppe'] ? ' - ' + match['Gruppe'] : ''}</td>
+                <td>${involvedStr}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        listingDiv.innerHTML = '';
+        listingDiv.appendChild(table);
     }
 
     init() {
-        this.bindEvents();
-        this.updateFileNames();
+    this.bindEvents();
+    this.bindTeamSearchEvents();
+    this.updateFileNames();
     }
 
     bindEvents() {
