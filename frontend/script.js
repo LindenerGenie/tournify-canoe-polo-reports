@@ -100,13 +100,15 @@ class SpielberichtApp {
     }
 
     renderTeamMatchListing(filteredTeams) {
+        // Store the latest relevant matches for export
+        this.latestEinsaetzeListing = [];
         const listingDiv = document.getElementById('teamMatchListing');
         if (!listingDiv) return;
         const teamNames = filteredTeams.map(t => t.name);
         // Get current date/time
         const now = new Date();
         // Find all matches where any team is playing or is referee
-        const relevantMatches = this.matches.filter(match => {
+    const relevantMatches = this.matches.filter(match => {
             // Parse date and time
             const dateStr = match['Tag'];
             const timeStr = match['Startzeit'];
@@ -129,8 +131,8 @@ class SpielberichtApp {
                 match['Schiedsrichter'] === name
             );
         });
-        // Sort by date/time
-        relevantMatches.sort((a, b) => {
+    // Sort by date/time
+    relevantMatches.sort((a, b) => {
             const getDate = m => {
                 let iso = m['Tag'];
                 if (iso && iso.match(/^\d{2}\.\d{2}\.\d{4}$/)) {
@@ -143,6 +145,7 @@ class SpielberichtApp {
         });
         if (relevantMatches.length === 0) {
             listingDiv.innerHTML = '<p>Keine zukünftigen Spiele für die gefilterten Teams gefunden.</p>';
+            this.latestEinsaetzeListing = [];
             return;
         }
         // Render as table
@@ -180,11 +183,18 @@ class SpielberichtApp {
             const involvedStr = uniqueInvolved.map(i =>
                 `<span style="color:${colors[i.type]};font-weight:bold;">${icons[i.type]} ${i.name}</span>`
             ).join(', ');
+            const einsatzObj = {
+                date: `${match['Tag']} ${match['Startzeit']}`,
+                teams: `${match['Team 1']} vs ${match['Team 2']}`,
+                liga: match['Liga'] + (match['Gruppe'] ? ' - ' + match['Gruppe'] : ''),
+                involved: uniqueInvolved.map(i => `${i.name} (${i.type === 'player' ? 'Spieler' : 'SR'})`).join(', ')
+            };
+            this.latestEinsaetzeListing.push(einsatzObj);
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${match['Tag']} ${match['Startzeit']}</td>
-                <td>${match['Team 1']} vs ${match['Team 2']}</td>
-                <td>${match['Liga']}${match['Gruppe'] ? ' - ' + match['Gruppe'] : ''}</td>
+                <td>${einsatzObj.date}</td>
+                <td>${einsatzObj.teams}</td>
+                <td>${einsatzObj.liga}</td>
                 <td>${involvedStr}</td>
             `;
             tbody.appendChild(tr);
@@ -194,9 +204,43 @@ class SpielberichtApp {
     }
 
     init() {
-    this.bindEvents();
-    this.bindTeamSearchEvents();
-    this.updateFileNames();
+        this.bindEvents();
+        this.bindTeamSearchEvents();
+        this.bindExportEinsaetzePdfEvent();
+        this.updateFileNames();
+    }
+
+    bindExportEinsaetzePdfEvent() {
+        const btn = document.getElementById('exportEinsaetzePdfBtn');
+        if (btn) {
+            btn.addEventListener('click', () => this.exportEinsaetzePdf());
+        }
+    }
+
+    async exportEinsaetzePdf() {
+        if (!this.latestEinsaetzeListing || this.latestEinsaetzeListing.length === 0) {
+            alert('Keine Einsätze zum Exportieren gefunden.');
+            return;
+        }
+        try {
+            const response = await fetch('/api/einsaetze_pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.latestEinsaetzeListing)
+            });
+            if (!response.ok) throw new Error('PDF Export fehlgeschlagen');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'einsaetze_uebersicht.pdf';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            alert('Fehler beim PDF Export: ' + err.message);
+        }
     }
 
     bindEvents() {

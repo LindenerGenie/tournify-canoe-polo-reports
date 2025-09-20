@@ -18,11 +18,13 @@ RUN mkdir -p /app/app /app/frontend /app/assets
 
 COPY assets/template.xlsx /app/assets/template.xlsx
 
+
 # Copy backend files
 COPY backend/app/main.py /app/app/main.py
 COPY backend/app/generator.py /app/app/generator.py
 COPY backend/app/pdf-converter.py /app/app/pdf_converter.py
 COPY backend/app/util.py /app/app/util.py
+COPY backend/app/einsaetze_pdf.py /app/app/einsaetze_pdf.py
 
 # Create empty __init__.py
 RUN touch /app/app/__init__.py

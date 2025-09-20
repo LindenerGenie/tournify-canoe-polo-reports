@@ -84,7 +84,10 @@
                 <button type="button" id="clearTeamSearch" class="clear-search" title="Suche löschen" aria-label="Suche löschen">✕</button>
             </div>
             <div id="teamSearchResults" class="team-search-results"></div>
-            <div id="teamMatchListing" class="team-match-listing"></div>
+            <div style="display: flex; align-items: center; gap: 1em;">
+                <div id="teamMatchListing" class="team-match-listing"></div>
+                <button id="exportEinsaetzePdfBtn" class="btn btn-info" style="height: fit-content;">PDF Export</button>
+            </div>
         </div>
     </div>
     <script>

@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from .generator import read_spielplan, create_spielbericht
 from .pdf_converter import excel_to_pdf
+from app.einsaetze_pdf import create_einsaetze_pdf
 import pandas as pd
 import os
 import subprocess
@@ -25,9 +26,29 @@ spielplan_df = None
 template_placeholders = None
 players_by_team = None
 
+
 @app.get("/")
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+# New endpoint for einsätze PDF export
+@app.post("/api/einsaetze_pdf")
+async def einsaetze_pdf_endpoint(request: Request):
+    try:
+        einsaetze_list = await request.json()
+        # Validate input
+        if not isinstance(einsaetze_list, list):
+            return JSONResponse(status_code=400, content={"success": False, "detail": "Input must be a list of einsätze objects."})
+        pdf_bytes = create_einsaetze_pdf(einsaetze_list)
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type='application/pdf',
+            headers={'Content-Disposition': 'attachment; filename=einsaetze_uebersicht.pdf'}
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"success": False, "detail": f"Error generating einsätze PDF: {str(e)}"})
 
 @app.post("/api/upload")
 async def upload_files(

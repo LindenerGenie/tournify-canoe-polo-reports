@@ -1,0 +1,23 @@
+services:
+  spielplan-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spielplan-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./assets:/app/assets
+      - ./frontend:/app/frontend
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+#
+# After running `docker-compose up --build`, access the frontend at:
+# http://localhost:8080/frontend/index.html
