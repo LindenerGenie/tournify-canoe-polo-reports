@@ -2,10 +2,10 @@ FROM python:3.11-slim
 
 # Install system dependencies for LibreOffice and PDF generation
 RUN apt-get update && apt-get install -y \
-    libreoffice \
-    poppler-utils \
-    fonts-dejavu-core \
-    && rm -rf /var/lib/apt/lists/*
+  libreoffice \
+  poppler-utils \
+  fonts-dejavu-core \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -29,7 +29,7 @@ RUN touch /app/app/__init__.py
 
 # Copy frontend files
 COPY frontend/index.html /app/frontend/index.html
-COPY frontend/styles.css /app/frontend/style.css
+COPY frontend/styles.css /app/frontend/styles.css
 COPY frontend/script.js /app/frontend/script.js
 
 # Expose port
